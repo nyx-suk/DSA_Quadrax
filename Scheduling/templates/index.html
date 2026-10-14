@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Timetable Scheduler | Graph Colouring Visualizer</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Vis.js Network for interactive graph -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Chart.js for benchmark comparison -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <i data-lucide="calendar" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            Exam Timetable Scheduler
+            <span class="text-xs font-medium px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              Graph Colouring
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400">Capacitated Graph Coloring with Hall Limits (R)</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span class="text-xs text-slate-400 hidden sm:inline-flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Exact (B&B) + DSatur + Welsh-Powell
+        </span>
+        <button id="btn-theme-info" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="About Algorithm">
+          <i data-lucide="help-circle" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- INPUT CONFIGURATION SECTION -->
+    <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 shadow-xl backdrop-blur">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-5 h-5 text-sky-400"></i>
+            Graph Input & Problem Parameters
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Select an input mode: upload/paste conflict graph or randomly generate one.</p>
+        </div>
+
+        <!-- Mode Toggle Tabs -->
+        <div class="inline-flex p-1 rounded-xl bg-slate-900/80 border border-slate-700/70">
+          <button id="tab-file-btn" class="px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-2 bg-sky-600 text-white shadow-md">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            Option 1: Manual / File
+          </button>
+          <button id="tab-generate-btn" class="px-4 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            Option 2: Random Graph
+          </button>
+        </div>
+      </div>
+
+      <!-- Option 1: File/Manual Text Form -->
+      <div id="option-file-panel" class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-medium text-slate-300">Preset Instances:</label>
+            <select id="preset-select" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+              <option value="">-- Load a Sample --</option>
+              <option value="small">Small University (12 Courses, R=3)</option>
+              <option value="medium">Departmental Exams (20 Courses, R=4)</option>
+              <option value="dense">Dense High-Conflict (15 Courses, R=3)</option>
+            </select>
+          </div>
+          <div>
+            <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition">
+              <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+              Upload .txt
+              <input type="file" id="file-upload" accept=".txt" class="hidden">
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">
+            Input Format: Line 1 = <code class="text-sky-400 font-mono">N M R</code>, followed by M conflict pairs <code class="text-sky-400 font-mono">u v</code>
+          </label>
+          <textarea id="raw-input-text" rows="7" class="w-full bg-slate-950 font-mono text-xs text-sky-200 p-3 rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="12 18 3&#10;1 2&#10;1 3&#10;..."></textarea>
+        </div>
+      </div>
+
+      <!-- Option 2: Random Generator Form (Hidden by default) -->
+      <div id="option-generate-panel" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 pb-2">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-2">Number of Courses (N)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="gen-n-range" min="6" max="40" value="18" class="w-full accent-sky-500">
+            <input type="number" id="gen-n-input" min="6" max="60" value="18" class="w-16 bg-slate-900 border border-slate-700 text-center text-xs font-bold text-white rounded-lg py-1.5">
+          </div>
+          <span class="text-[11px] text-slate-500">Total university courses needing exam slots.</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-2">Hall Capacity (R per slot)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="gen-r-range" min="1" max="10" value="4" class="w-full accent-sky-500">
+            <input type="number" id="gen-r-input" min="1" max="20" value="4" class="w-16 bg-slate-900 border border-slate-700 text-center text-xs font-bold text-white rounded-lg py-1.5">
+          </div>
+          <span class="text-[11px] text-slate-500">Maximum exams runnable simultaneously in one slot.</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-2">Conflict Edge Density (p)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="gen-density-range" min="0.05" max="0.80" step="0.05" value="0.25" class="w-full accent-sky-500">
+            <span id="gen-density-val" class="w-16 text-center text-xs font-bold text-sky-400 bg-slate-900 border border-slate-700 rounded-lg py-1.5">0.25</span>
+          </div>
+          <span class="text-[11px] text-slate-500">Probability of conflict between any pair of courses.</span>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="mt-6 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-4 text-xs text-slate-400">
+          <label class="flex items-center gap-1.5">
+            <span>B&B Timeout:</span>
+            <select id="timeout-select" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200">
+              <option value="5">5 seconds</option>
+              <option value="15" selected>15 seconds</option>
+              <option value="30">30 seconds</option>
+            </select>
+          </label>
+        </div>
+        <button id="btn-solve" class="px-6 py-2.5 rounded-xl font-semibold text-xs text-white bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 shadow-lg shadow-sky-500/25 flex items-center gap-2 transition transform active:scale-95">
+          <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+          <span>Solve & Build Timetable</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- LOADING SPINNER -->
+    <div id="loading-state" class="hidden py-16 text-center space-y-4">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-sky-500 border-t-transparent"></div>
+      <p class="text-sm font-medium text-slate-300">Executing Welsh-Powell, DSatur & Exact Branch & Bound...</p>
+    </div>
+
+    <!-- ERROR BANNER -->
+    <div id="error-banner" class="hidden p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+      <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
+      <span id="error-message">An error occurred</span>
+    </div>
+
+    <!-- RESULTS SECTION (Hidden until solved) -->
+    <div id="results-section" class="hidden space-y-8">
+
+      <!-- OUTPUT 1: METRICS & COMPARISON TABLE -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-mono">1</span>
+            Output 1: Minimum Slots Found & Optimality Status
+          </h2>
+          <div id="optimality-badge" class="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- 4 Metric Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-slate-400 font-medium">Minimum Slots Achieved</span>
+            <div id="card-best-slots" class="text-3xl font-extrabold text-white mt-1">-</div>
+            <span id="card-best-method" class="text-[11px] text-sky-400 font-medium mt-1 block">Best Algorithm</span>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-slate-400 font-medium">Theoretical Lower Bound</span>
+            <div id="card-lower-bound" class="text-3xl font-extrabold text-indigo-400 mt-1">-</div>
+            <span class="text-[11px] text-slate-400 mt-1 block">max(⌈N/R⌉, Clique)</span>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-slate-400 font-medium">Courses & Hall Capacity</span>
+            <div id="card-n-r" class="text-3xl font-extrabold text-emerald-400 mt-1">-</div>
+            <span id="card-m-conflicts" class="text-[11px] text-slate-400 mt-1 block">Conflicts: -</span>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-slate-400 font-medium">Exact Solver Runtime</span>
+            <div id="card-exact-time" class="text-3xl font-extrabold text-amber-400 mt-1">-</div>
+            <span id="card-exact-status" class="text-[11px] text-slate-400 mt-1 block">Branch & Bound</span>
+          </div>
+        </div>
+
+        <!-- Algorithm Comparison Table -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-lg">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-700">
+              <tr>
+                <th class="px-5 py-3">Algorithm</th>
+                <th class="px-5 py-3">Type</th>
+                <th class="px-5 py-3 text-center">Slots Used</th>
+                <th class="px-5 py-3 text-right">Running Time</th>
+                <th class="px-5 py-3 text-center">Proven Optimal?</th>
+              </tr>
+            </thead>
+            <tbody id="comparison-tbody" class="divide-y divide-slate-700/60 text-slate-200">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- OUTPUT 2 & 3: SLOT LIST + TIMETABLE GRID -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Output 2: Slot-wise Course List -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-mono">2</span>
+              Output 2: Slot-wise Courses
+            </h3>
+            <span class="text-[11px] text-slate-400">Click to filter</span>
+          </div>
+          <div id="slot-list-container" class="space-y-2.5 overflow-y-auto max-h-[380px] pr-1">
+            <!-- Dynamically populated slot cards -->
+          </div>
+        </div>
+
+        <!-- Output 3: Final Timetable Grid (matching color scheme) -->
+        <div class="lg:col-span-2 bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-sky-500/20 text-sky-400 flex items-center justify-center text-xs font-mono">3</span>
+                Output 3: Exam Timetable Grid
+              </h3>
+              <p class="text-[11px] text-slate-400">Rows = Slots, Columns = Halls (Colors match graph nodes)</p>
+            </div>
+            <button id="btn-download-csv" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-100 flex items-center gap-1.5 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Export CSV
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-700 flex-grow">
+            <table class="w-full text-center border-collapse text-xs" id="timetable-grid-table">
+              <!-- Dynamically populated table matching color scheme -->
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VISUALIZATION 1: INTERACTIVE CONFLICT GRAPH -->
+      <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-700/60">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="share-2" class="w-4 h-4 text-sky-400"></i>
+              Interactive Conflict Graph (Colored by Exam Slot)
+            </h3>
+            <p class="text-[11px] text-slate-400">Nodes are courses; edges represent conflict students. Drag to adjust layout.</p>
+          </div>
+          <div id="graph-slot-legend" class="flex flex-wrap items-center gap-1.5 text-xs">
+            <!-- Slot color dots legend -->
+          </div>
+        </div>
+
+        <div id="network-container" class="w-full h-[460px] bg-slate-950/70 rounded-xl border border-slate-800 relative">
+          <!-- Graph rendered by Vis.js -->
+        </div>
+      </section>
+
+      <!-- VISUALIZATION 2: ANIMATION OF COURSE ASSIGNMENT -->
+      <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-700/60">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="film" class="w-4 h-4 text-pink-400"></i>
+              Course-to-Slot Assignment Animation
+            </h3>
+            <p class="text-[11px] text-slate-400">Watch the greedy DSatur heuristic make assignments dynamically step-by-step.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="anim-prev-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Step Back">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button id="anim-play-btn" class="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white font-semibold text-xs flex items-center gap-1.5 transition">
+              <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+              <span id="anim-play-text">Play</span>
+            </button>
+            <button id="anim-next-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Step Forward">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <button id="anim-reset-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 transition" title="Reset">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Animation scrubber & info banner -->
+        <div class="space-y-3">
+          <div class="flex items-center gap-4">
+            <input type="range" id="anim-scrubber" min="0" max="1" value="0" class="w-full accent-pink-500">
+            <span id="anim-step-counter" class="text-xs font-mono text-slate-300 min-w-[70px] text-right">Step 0/0</span>
+          </div>
+
+          <div id="anim-status-box" class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center justify-between">
+            <span id="anim-status-text">Click Play or use the arrow buttons to step through the assignment sequence.</span>
+            <span id="anim-latest-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30 hidden">Course -</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VISUALIZATION 3: BENCHMARK COMPARISON AS N INCREASES -->
+      <section class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-700/60">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="trending-up" class="w-4 h-4 text-emerald-400"></i>
+              Scalability Comparison Chart (As N Increases)
+            </h3>
+            <p class="text-[11px] text-slate-400">Comparing Slots Used & Execution Time between Welsh-Powell, DSatur, and Exact Branch & Bound.</p>
+          </div>
+          <button id="btn-run-benchmark" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1.5 transition">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            Run N Benchmark
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+            <h4 class="text-xs font-bold text-slate-300 mb-2 text-center">Minimum Slots Used vs Number of Courses (N)</h4>
+            <div class="h-64">
+              <canvas id="chart-slots"></canvas>
+            </div>
+          </div>
+          <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+            <h4 class="text-xs font-bold text-slate-300 mb-2 text-center">Runtime (Seconds, Log Scale) vs Number of Courses (N)</h4>
+            <div class="h-64">
+              <canvas id="chart-runtime"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    Exam Timetable Scheduling &bull; Graph Colouring Challenge &bull; DSA Project
+  </footer>
+
+  <!-- Main JavaScript Controller -->
+  <script src="/static/js/main.js"></script>
+</body>
+</html>
