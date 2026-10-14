@@ -581,6 +581,16 @@ function togglePlayAnimation() {
   }
 }
 
+function updatePlayIcon(iconName) {
+  const iconContainer = document.getElementById('anim-play-icon');
+  if (iconContainer) {
+    iconContainer.innerHTML = `<i data-lucide="${iconName}" class="w-4 h-4 fill-current"></i>`;
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  }
+}
+
 function playAnimation() {
   const totalSteps = state.animation.steps.length;
   if (state.animation.currentStep >= totalSteps) {
@@ -588,8 +598,7 @@ function playAnimation() {
   }
   state.animation.isPlaying = true;
   elements.animPlayText.textContent = "Pause";
-  elements.animPlayBtn.querySelector('i').setAttribute('data-lucide', 'pause');
-  if (window.lucide) lucide.createIcons();
+  updatePlayIcon('pause');
 
   state.animation.timer = setInterval(() => {
     if (state.animation.currentStep < totalSteps) {
@@ -604,8 +613,7 @@ function pauseAnimation() {
   state.animation.isPlaying = false;
   clearInterval(state.animation.timer);
   elements.animPlayText.textContent = "Play";
-  elements.animPlayBtn.querySelector('i').setAttribute('data-lucide', 'play');
-  if (window.lucide) lucide.createIcons();
+  updatePlayIcon('play');
 }
 
 function stepAnimation(direction) {

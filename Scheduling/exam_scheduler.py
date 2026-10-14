@@ -228,7 +228,11 @@ def dsatur_coloring(
 # =====================================================================
 
 def exact_branch_and_bound(
-    G: nx.Graph, R: int, initial_upper_bound: int, time_limit: float = 15.0
+    G: nx.Graph,
+    R: int,
+    initial_upper_bound: Optional[int] = None,
+    initial_assignment: Optional[Dict[int, int]] = None,
+    time_limit: float = 15.0,
 ) -> Tuple[Dict[int, int], int, bool, float]:
     """
     Exact Branch-and-Bound solver for Capacitated Graph Coloring:
@@ -244,8 +248,8 @@ def exact_branch_and_bound(
         return {}, 0, True, 0.0
 
     lower_bound = calculate_lower_bound(G, R)
-    best_slots = initial_upper_bound
-    best_assignment: Dict[int, int] = {}
+    best_slots = initial_upper_bound if initial_upper_bound is not None else n + 1
+    best_assignment: Dict[int, int] = dict(initial_assignment) if initial_assignment else {}
     timed_out = False
 
     # Precompute neighbors as indices

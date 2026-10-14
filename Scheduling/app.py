@@ -10,6 +10,7 @@ Provides REST API endpoints for:
 
 import io
 import json
+import os
 import random
 import time
 from collections import defaultdict
@@ -201,8 +202,9 @@ def solve():
 
         # 3. Run Exact Branch-and-Bound
         initial_ub = min(wp_slots, ds_slots)
+        heuristic_assign = ds_assign if ds_slots <= wp_slots else wp_assign
         ex_assign, ex_slots, ex_optimal, ex_time = core.exact_branch_and_bound(
-            G, R, initial_ub, time_limit=time_limit
+            G, R, initial_ub, initial_assignment=heuristic_assign, time_limit=time_limit
         )
 
         # Choose best solution
